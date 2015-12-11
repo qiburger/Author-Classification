@@ -21,12 +21,12 @@ def times_call(sentence, key):
 
 	#switch between api_key's if one is no good
 	if(not r and key == api_key):
-		print(url)
+	#	print(url)
 		print("Bad request, first time")
 		time.sleep(1)
 		return times_call(sentence[:100], api_key2)
 	elif(not r and key == api_key2):
-		print(url)
+	#	print(url)
 		print("Bad request, second time")
 		time.sleep(1)
 		return times_call(sentence[:100], api_key)
@@ -34,19 +34,20 @@ def times_call(sentence, key):
 	json_obj = r.json()
 	hits = json_obj["response"]["meta"]["hits"]
 	if(hits == 0):
-		print(url)
+#		print(url)
 		print("couldn't find any data on the json pull")
 		return False
 	if(not json_obj):
 		print("Couldn't find json_obj")
 		return False
 	different_results = json_obj["response"]["docs"]
-	with open('poss_results.txt', 'w') as g:
+	with open('poss_results.txt', 'a') as g:
+		gina = 0
 		for result in different_results:
 			if(not result["byline"]):
 				#print(result)
-				#print("No authors for this article")
-				g.write(sentence + '\t' + '???')
+				print("No authors for this article")
+				#g.write(sentence + '\t' + '???')
 				continue
 			people = result["byline"]["person"]
 			for person in people:
@@ -58,12 +59,10 @@ def times_call(sentence, key):
 				last = person["lastname"].lower()
 				last = last.encode('utf8')
 				if(first == "gina" and last == "kolata"):
-					g.write(sentence + '\t1\n')
+					gina = 1	
 					#print("Hit a legit article")
-				else:
-					#print("Not legit, Written by: " + first + " " + last + "\n")
 
-					g.write(sentence + '\t0\n')
+		g.write(sentence + '\t' + str(gina) + '\n')
 	return True
 def parse_train(author_dict):
 	with open('../project_articles_train', 'rU') as f:
@@ -86,8 +85,11 @@ if __name__ == '__main__':
 		for line in f:
 			i+=1
 			sentence = line.rsplit('\n', 1)[0]	
+			print("We are on sentence " + str(i))
 			if(not times_call(sentence, api_key)):
-				print(sentence)
+				with open('poss_results.txt', 'a') as g:
+					g.write(sentence + '\t' + '???' + '\n')
+				#print(sentence)
 			if(i == 500):
 				break	
 	
