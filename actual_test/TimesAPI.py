@@ -15,6 +15,7 @@ def get_all_files(directory):
 
 def cut_sentence(sentence):
 	sentence = sentence.replace(" ", "+")	
+	sentence = sentence.replace("\"", "\'\'")
 	total_words = 0
 	for i in xrange(0, len(sentence)):
 		if(sentence[i] == '+'):
@@ -30,7 +31,6 @@ def times_call(sentence, key):
 	url = url + "api-key=" + key
 	url = url.replace("&amp", "%26")
 	r = requests.get(url)
-
 	#switch between api_key's if one is no good
 	if(not r and key == api_key):
 	#	print(url)
@@ -96,23 +96,23 @@ def compare_dicts(train_dict, poss_dict):
 	return float(correct) / total
 
 if __name__ == '__main__':
-	author_dict = {}
-	path = '/home1/c/cis530/project/data/project_articles_train'
-	parse_train(author_dict, path)
+	#author_dict = {}
+	path = '/home1/c/cis530/project/data/project_articles_test'
+	#parse_train(author_dict, path)
  	i = 0
 	with open(path, 'rU') as f:
 		for line in f:
 			i+=1
 			sentence = line.rsplit('\n', 1)[0]	
-			sentence = line.rsplit('\t', 1)[0]
+			#sentence = line.rsplit('\t', 1)[0]
 			print("We are on sentence " + str(i))
 			if(not times_call(sentence, api_key)):
 				with open('poss_results.txt', 'a') as g:
 					g.write(sentence + '\t' + '0' + '\n')
-			if(i == 1000):
-				break	
-	poss_path = 'poss_results.txt'	
-	poss_author_dict = {}
-	parse_train(poss_author_dict, poss_path)
-	accuracy = compare_dicts(author_dict, poss_author_dict)
-	print("My accuracy was " + str(accuracy))
+	#		if(i == 1000):
+	#			break	
+	#poss_path = 'poss_results.txt'	
+	#poss_author_dict = {}
+	#parse_train(poss_author_dict, poss_path)
+	#accuracy = compare_dicts(author_dict, poss_author_dict)
+#	print("My accuracy was " + str(accuracy))
