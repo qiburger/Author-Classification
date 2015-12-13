@@ -259,56 +259,41 @@ def run_baseline():
                 fout.write("1\n")
 
 
-def get_kolata_threshold():
+def validation(number_of_holdouts):
     """
-    Test each paragraph by the author again all training set to examine thresholds
+    Test on our algorithm. For simplicity, we pick on the first n paragraphs in training (n is number_of_holdouts) and use the rest to see our accuracy. 
+    Will first try with 1500 holdouts.
     """
     test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank  = load_serialized_lists()
     counter = 0
-    min_score = 10000
-    max_score = 0
-    total_score = 0
+ 
+    # First re-build test_paragraphs, kolata_list, non_kolata_list
+    test_paragraphs = []
+    kolata_list = []
+    non_kolata_list = []
 
-    min_non_score = 10000
-    max_non_score = 0
-    total_non_score = 0
+    with open("project_articles_train", "r") as fin:
+        for line in fin:
+            temp = line.rstrip().split('\t')
 
-    for i in range(len(kolata_paragraph)):
-        temp_paragraph = kolata_paragraph[i]
-        temp_kolata_list = list(kolata_list)
-        for token in tokenize(temp_paragraph):
-            temp_kolata_list.remove(token)
-        temp_kolata_score, temp_non_score = get_match_score(temp_paragraph, temp_kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
-        min_score = min(temp_kolata_score, min_score)
-        max_score = max(temp_kolata_score, max_score)
-        total_score += temp_kolata_score
+            if counter < number_of_holdouts:
+                test_paragraphs.append(temp[0])
+                counter += 1
+            
+            else:
+                if int(temp[1]) == 0:
+                    non_kolata_list.extend(tokenize(temp[0]))
+                elif int(temp[1]) == 1:
+                    kolata_list.extend(tokenize(temp[0]))
+                counter += 1
 
-        min_non_score = min(temp_non_score, min_non_score)
-        max_non_score = max(temp_non_score, max_non_score)
-        total_non_score += temp_non_score
-
-        print min_score
-
-    with open("threshold_kolata_paragraphs.txt", "w") as fout:
-        fout.write("Min score for a kolata paragraph vs kolata training sets: \n")
-        fout.write(str(min_score))
-        fout.write("\nMax score for a kolata paragraph vs kolata training sets: \n")
-        fout.write(str(max_score))
-        fout.write("\nAvg score for a kolata paragraph vs kolata training sets: \n")
-        fout.write(str(float(total_score)/len(kolata_paragraph)))
-
-        fout.write("\nMin score for a kolata paragraph vs non kolata training sets: \n")
-        fout.write(str(min_non_score))
-        fout.write("\nMax score for a kolata paragraph vs non kolata training sets: \n")
-        fout.write(str(max_non_score))
-        fout.write("\nAvg score for a kolata paragraph vs non kolata training sets: \n")
-        fout.write(str(float(total_non_score)/len(kolata_paragraph)))
-
-    # Serialize
-    list_out = [min_score, max_score, total_score, min_non_score, max_non_score, total_non_score]
-    cPickle.dump(list_out, open('thresholds_kolata.p', 'wb'))
-
-    return list_out
+    with open("validation_results.txt", "w") as fout:
+        for paragraph in test_paragraphs:
+            author_score, non_author_score = get_match_score(paragraph, kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
+            if author_score <= non_author_score:
+                fout.write("0\n")
+            else:
+                fout.write("1\n")
 
 
 def load_serialized_lists():
@@ -346,6 +331,7 @@ def run_modified_baseline(delta):
 def remove_false_negative_baseline(delta):
     """
     This will attempt to remove the false negative and later combined with the SVM results.
+    First attempt uses 15 as a delta adjustment. See justification file for reference. 
     """
     counter = 0
     test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank = load_serialized_lists()
@@ -374,17 +360,22 @@ if __name__ == "__main__":
     # corpus = cPickle.load(open('corpus.p', "rb"))
     # print (len(kolata_list) + len(non_kolata_list)) == len(corpus)
     # test = []
+
+    # validation(1500)
     # with open("project_articles_test", "r") as testin:
     #     for line in testin:
     #         test.append(line.rstrip())
     # print test
     # run_baseline()
-    # get_kolata_threshold()
+
     # tester("ph.d.")
     
     # run_baseline()
-    # get_kolata_threshold()
+
     # run_modified_baseline(4)
-    remove_false_negative_baseline(3)
+
+
+    # remove_false_negative_baseline(15)
+
 
     print "done"

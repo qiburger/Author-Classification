@@ -1,0 +1,14 @@
+We ran our synonym based test on all test paragraphs.
+
+First glance for the absolute value of differences: 
+min difference is: 0.05825987
+max difference is: 156.345213309
+avg difference is: 29.4818087478
+Now, for paragraph with higher non author scores, let's examine the absolute value of difference:
+min difference is: 0.0855515835
+max difference is: 134.337570431
+avg difference is: 29.3208521483
+Now, for paragraph with higher author scores, let's examine the absolute value of difference:
+min difference is: 0.05825987
+max difference is: 156.345213309
+avg difference is: 29.6230105625
