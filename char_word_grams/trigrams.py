@@ -49,15 +49,54 @@ def check_accuracy(test_dict, predictions):
 	print("We checked " + str(i) + " booleans and predictions")
 	return float(correct) / i
 
+
+def check_accuracy_combined(test_results):
+	combined = []
+	with open('combined.txt', 'rU') as f1:
+		for line in f1:
+			trim_line = line.rsplit('\n', 1)[0]
+			combined.append(int(trim_line))	
+	correct = 0
+	j = 0
+	for i in xrange(0, len(combined)):
+		if test_results[i] == combined[i]:
+			correct += 1			
+		j += 1
+	print("We checked " + str(j) + " items")
+	print(classification_report(combined, test_results))
+	return float(correct) / j
+def combine_results():
+	qi_path = '../baseline_v2.txt'
+	chris_path = 'test.txt'
+	qi_data = []
+	chris_data = []
+	with open(qi_path, 'rU') as f:
+		for line in f:
+			trim_line = line.rsplit('\n', 1)[0]
+			qi_data.append(int(trim_line))
+	with open(chris_path, 'rU') as f2:
+		for line in f2:
+			trim_line = line.rsplit('\n', 1)[0]
+			chris_data.append(int(trim_line))
+	for i in xrange(0, len(qi_data)):
+		if(chris_data[i] == 1 and qi_data[i] == 0):
+			chris_data[i] = 0
+		
+	with open('combined.txt', 'w') as f3:
+		for value in chris_data:
+			f3.write(str(value) + '\n')	
 if __name__ == '__main__':
-	path = '../project_articles_train'
-	author_dict = load_file(path)
+	#path = '../project_articles_train'
+	#author_dict = load_file(path)
 	test_path = '../actual_test/poss_results.txt'	
 	test_dict = load_file(test_path)
-	predictions = extract_features(author_dict, test_dict)
-	accuracy = check_accuracy(test_dict, predictions)
-	print("My accuracy is " + str(accuracy))
-	with open("test.txt", 'w') as f:
-		for entry in predictions:
-			f.write(str(entry) + '\n')
+	#predictions = extract_features(author_dict, test_dict)
+	#accuracy = check_accuracy(test_dict, predictions)
+	#print("My accuracy is " + str(accuracy))
+	#with open("test.txt", 'w') as f:
+	#	for entry in predictions:
+	#		f.write(str(entry) + '\n')
+	combine_results()
+	combined_accuracy = check_accuracy_combined(test_dict["booleans"])
+	print("My combined accuracy is " + str(combined_accuracy))
 
