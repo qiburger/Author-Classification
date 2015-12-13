@@ -11,6 +11,7 @@ import cPickle
 import re
 from nltk.cluster.util import cosine_distance
 from nltk.stem.wordnet import WordNetLemmatizer
+import time
 
 
 def tokenize(rawexcerpt):
@@ -26,7 +27,7 @@ def get_synonyms(word):
     """
     Must input tokenized string, all lower !!
     :param word: Tokenized string word
-    :return: set of synonyms
+    :return: set of synonyms, all lowercase
     """
     output = []
     synsets = wn.synsets(word.decode('utf8'))
@@ -34,18 +35,19 @@ def get_synonyms(word):
         return set([word.decode("utf8")])
     else:
         for i, j in enumerate(synsets):
-            output.extend(j.lemma_names())
+            for lemma in j.lemma_names():
+                output.append(lemma.lower())
         return set(output)
 
 
-def get_match_score(paragraph, tokens_by_author, tokens_not_by_author, corpus, stoplist):
+def get_match_score(paragraph, tokens_by_author, tokens_not_by_author, corpus_distribution, stoplist, lemma_bank):
     """
 
     :param stoplist: set of relevant stoplist
     :param paragraph: string of the paragraph in test set. (no new line)
     :param tokens_by_author: list of tokenized words from the author (not unique)
     :param tokens_not_by_author: list of tokenized words from other authors
-    :param corpus: use to get global word frequency training set + test set
+    :param corpus_distribution: global word frequency of tokens in training set + test set
     """
 
     # Get word distribution for author and non authors
@@ -67,8 +69,6 @@ def get_match_score(paragraph, tokens_by_author, tokens_not_by_author, corpus, s
     non_author_distribution = Counter(tokens_not_by_author)
     non_author_total_words = len(tokens_not_by_author)
 
-    corpus_distribution = Counter(corpus)
-
     for test_word in unique_test_words:
         for author_word in unique_author_words:
             # Here I kept UPPER vs lower case difference
@@ -76,40 +76,72 @@ def get_match_score(paragraph, tokens_by_author, tokens_not_by_author, corpus, s
                 # score = min(normalized frequency * 1000) * sum of global freq of syn / global freq of target word
                 temp_match_score = min((float(author_distribution[author_word]) * 1000.0 / author_total_words), (
                     float(paragraph_distribution[author_word]) * 1000.0 / paragraph_total_words)) * float(
-                    get_sum_synonyms(author_word, corpus_distribution)) / float(corpus_distribution[author_word])
-                if temp_match_score == 0:
-                    raise ValueError('Something is zero with %s' % (test_word))
+                    get_sum_synonyms(author_word, corpus_distribution, lemma_bank)) / float(corpus_distribution[author_word])
+                # if temp_match_score == 0:
+                    # raise ValueError('Something is zero with %s' % (test_word))
                 author_score += temp_match_score
 
         for non_author_word in unique_not_author_words:
             if test_word == non_author_word and (test_word not in stoplist):
-                temp_match_score += min((float(non_author_distribution[test_word]) * 1000.0 / non_author_total_words), (
+                temp_match_score = min((float(non_author_distribution[test_word]) * 1000.0 / non_author_total_words), (
                     float(paragraph_distribution[test_word]) * 1000.0 / paragraph_total_words)) * float(
-                    get_sum_synonyms(test_word, corpus_distribution)) / float(corpus_distribution[test_word])
+                    get_sum_synonyms(test_word, corpus_distribution, lemma_bank)) / float(corpus_distribution[test_word])
                 non_author_score += temp_match_score
 
+    print author_score
+    print non_author_score
     return author_score, non_author_score
 
 
 
-def get_sum_synonyms(target_word, corpus_distribution):
+def get_sum_synonyms(target_word, corpus_distribution, lemma_bank):
     """
     Get the sum over the global frequencies of all synonyms of target word
     NOTE: here capitalization matters!
     :param target_word: target token
     :param corpus_distribution: Counter dictionary of the corpus
+    :param lemma_bank: mapping of lemma to actual tokens in corpus
     """
     out = 0
-    lmtzr = WordNetLemmatizer()
+    # lmtzr = WordNetLemmatizer()
     target_synonym = get_synonyms(target_word)
+
+    set_of_actual_tokens = set()
+
     for syn in target_synonym:
-        for token in corpus_distribution:
-            if (token.decode('utf8') == syn) or (target_synonym & get_synonyms(token)): #Actual words equal or intersection between synonyms
-                out += corpus_distribution[token]
-    if out == 0:
-        raise ValueError('Something is zero with %s' % (target_word))
+        set_of_actual_tokens.update(lemma_bank[syn])
+
+    for actual_token in set_of_actual_tokens:
+        out += corpus_distribution[actual_token]
+
+    # if out == 0:
+        # raise ValueError('Something is zero with %s' % (target_word))
     return out
 
+
+def build_lemma_bank(corpus_distribution):
+    """
+    :param corpus_distribution: global freq of words that occur in corpus
+    :return: a mapping of lemmas to actual tokens in corpus
+    """
+    start_time = time.time()
+
+    lemma_bank = defaultdict(list)
+
+    for token in corpus_distribution:
+        lemma_list = set()
+        synsets = wn.synsets(token.decode('utf8'))
+
+        if not synsets:
+            lemma_bank[token.decode('utf8')].append(token)
+        else:
+            for i, j in enumerate(synsets):
+                lemma_list.add(j.name().rsplit('.',2)[0])
+            for lemma in lemma_list:
+                lemma_bank[lemma].append(token)
+
+    print("--- %s seconds ---" % (time.time() - start_time))
+    return lemma_bank
 
 
 def setup():
@@ -149,8 +181,11 @@ def setup():
 
     # Corpus is here defined as training set + entire test set
     corpus = kolata_list + non_kolata_list + test_tokens
+    corpus_distribution = Counter(corpus)
 
     stop_words = get_stopwords()
+
+    lemma_bank = build_lemma_bank(corpus_distribution)
 
     # Serialize all relevant lists
     cPickle.dump(kolata_list, open('kolata_list.p', 'wb'))
@@ -159,13 +194,14 @@ def setup():
     cPickle.dump(non_kolata_list, open('non_kolata_list.p', 'wb'))
     cPickle.dump(non_kolata_list, open('non_kolata_paragraph.p', 'wb'))
 
-    cPickle.dump(corpus, open('corpus.p', 'wb'))
+    cPickle.dump(corpus_distribution, open('corpus_distribution.p', 'wb'))
     cPickle.dump(test_paragraphs, open('test_paragraphs.p', 'wb'))
     cPickle.dump(stop_words, open('stop_words.p', 'wb'))
+    cPickle.dump(lemma_bank, open('lemma_bank.p', 'wb'))
 
     print "setup complete"
 
-    return test_paragraphs , kolata_list, non_kolata_list, corpus, stop_words, kolata_paragraph, non_kolata_paragraph
+    return test_paragraphs , kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank
 
 
 def get_stopwords():
@@ -213,10 +249,10 @@ def run_baseline():
     Threshold algorithm: test each paragraph by the author again all training set to set thresholds
     """
 
-    test_paragraphs, kolata_list, non_kolata_list, corpus, stop_words, kolata_paragraph, non_kolata_paragraph = load_serialized_lists()
+    test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank = load_serialized_lists()
     with open("baseline_results.txt", "w") as fout:
         for paragraph in test_paragraphs:
-            author_score, non_author_score = get_match_score(paragraph, kolata_list, non_kolata_list, corpus, stop_words)
+            author_score, non_author_score = get_match_score(paragraph, kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
             if author_score <= non_author_score:
                 fout.write("0\n")
             else:
@@ -224,7 +260,10 @@ def run_baseline():
 
 
 def get_kolata_threshold():
-    test_paragraphs, kolata_list, non_kolata_list, corpus, stop_words, kolata_paragraph, non_kolata_paragraph  = load_serialized_lists()
+    """
+    Test each paragraph by the author again all training set to examine thresholds
+    """
+    test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank  = load_serialized_lists()
     counter = 0
     min_score = 10000
     max_score = 0
@@ -239,7 +278,7 @@ def get_kolata_threshold():
         temp_kolata_list = list(kolata_list)
         for token in tokenize(temp_paragraph):
             temp_kolata_list.remove(token)
-        temp_kolata_score, temp_non_score = get_match_score(temp_paragraph, temp_kolata_list, non_kolata_list, corpus, stop_words)
+        temp_kolata_score, temp_non_score = get_match_score(temp_paragraph, temp_kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
         min_score = min(temp_kolata_score, min_score)
         max_score = max(temp_kolata_score, max_score)
         total_score += temp_kolata_score
@@ -270,21 +309,55 @@ def get_kolata_threshold():
     cPickle.dump(list_out, open('thresholds_kolata.p', 'wb'))
 
     return list_out
-        
 
 
 def load_serialized_lists():
-    if not os.path.isfile("kolata_paragraph.p"):
+    if not os.path.isfile("lemma_bank.p"):
         return setup()
     test_paragraphs = cPickle.load(open('test_paragraphs.p', "rb"))
     kolata_list = cPickle.load(open('kolata_list.p', "rb"))
     kolata_paragraph = cPickle.load(open('kolata_paragraph.p', "rb"))
     non_kolata_list = cPickle.load(open('non_kolata_list.p', "rb"))
     non_kolata_paragraph = cPickle.load(open('non_kolata_paragraph.p', "rb"))
-    corpus = cPickle.load(open('corpus.p', "rb"))
+    corpus_distribution = cPickle.load(open('corpus_distribution.p', "rb"))
     stop_words = cPickle.load(open('stop_words.p', "rb"))
+    lemma_bank = cPickle.load(open('lemma_bank.p', "rb"))
 
-    return test_paragraphs, kolata_list, non_kolata_list, corpus, stop_words, kolata_paragraph, non_kolata_paragraph
+    return test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank
+
+
+def run_modified_baseline(delta):
+    """
+    We observed false positives in the Baseline algorithm. Thus we will add some delta to the comparison.
+    """
+    counter = 0
+    test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank = load_serialized_lists()
+    with open("modified_results.txt", "w") as fout:
+        for paragraph in test_paragraphs:
+            print "Paragraph #" + str(counter)
+            counter += 1
+            author_score, non_author_score = get_match_score(paragraph, kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
+            if (author_score - non_author_score) > delta: #The difference must be at least larger than delta
+                fout.write("1\n")
+            else:
+                fout.write("0\n")
+
+
+def remove_false_negative_baseline(delta):
+    """
+    This will attempt to remove the false negative and later combined with the SVM results.
+    """
+    counter = 0
+    test_paragraphs, kolata_list, non_kolata_list, corpus_distribution, stop_words, kolata_paragraph, non_kolata_paragraph, lemma_bank = load_serialized_lists()
+    with open("remove_false_neg_results.txt", "w") as fout:
+        for paragraph in test_paragraphs:
+            print "Paragraph #" + str(counter)
+            counter += 1
+            author_score, non_author_score = get_match_score(paragraph, kolata_list, non_kolata_list, corpus_distribution, stop_words, lemma_bank)
+            if (non_author_score - author_score) > delta: #The difference must be at least larger than delta for it to be non kolata
+                fout.write("0\n")
+            else:
+                fout.write("1\n")
 
 
 if __name__ == "__main__":
@@ -306,6 +379,12 @@ if __name__ == "__main__":
     #         test.append(line.rstrip())
     # print test
     # run_baseline()
-    get_kolata_threshold()
+    # get_kolata_threshold()
+    # tester("ph.d.")
+    
+    # run_baseline()
+    # get_kolata_threshold()
+    # run_modified_baseline(4)
+    remove_false_negative_baseline(3)
 
     print "done"
