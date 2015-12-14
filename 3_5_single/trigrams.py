@@ -90,7 +90,7 @@ def combine_results():
 if __name__ == '__main__':
 	path = '../project_articles_train'
 	author_dict = load_file(path)
-	test_path = '../manual_test/poss_results.txt'	
+	test_path = '../actual_test/poss_results.txt'	
 	test_dict = load_file(test_path)
 	stop_list = []
 	with open("../stopwords.txt", 'rU') as stop:
