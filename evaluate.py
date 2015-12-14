@@ -133,7 +133,7 @@ def get_delta_analytics():
 
 
 if __name__ == "__main__":
-    print compare_results("3_5_single/test.txt", "actual_test/poss_results.txt")
+    #print compare_results("", "")
     # get_delta_analytics()
 
 
