@@ -79,6 +79,10 @@ def compare_results(submission_file, true_result_address):
 
 
 def get_delta_analytics():
+    '''
+        This function analyzes our match scores for all test sets and see
+        how big the discrepencies are between the 0 and 1 decisions for reach paragraph.
+    '''
     counter = 0
     author_list = []
     non_author_list = []
