@@ -63,6 +63,7 @@ def compare_results(submission_file, true_result_address):
         elif true_results[i] == 0 and results[i] == 1:
             false_pos += 1
         elif true_results[i] == 1 and results[i] == 0:
+	    print(i + 1)
             false_neg += 1
         elif true_results[i] == 0 and results[i] == 0:
             true_neg += 1
@@ -128,7 +129,7 @@ def get_delta_analytics():
 
 
 if __name__ == "__main__":
-    print compare_results("validation_results.txt", "project_articles_train")
+    print compare_results("3_5_single/test.txt", "actual_test/poss_results.txt")
     # get_delta_analytics()
 
 

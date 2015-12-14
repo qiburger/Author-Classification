@@ -22,7 +22,7 @@ def extract_features(author_dict, test_dict, stop_list):
 	#originall 2k
 	word_vector = TfidfVectorizer( analyzer="word", ngram_range=(3,3),
 		max_features = None, binary = False, stop_words=stop_list)
-	char_vector = TfidfVectorizer( analyzer="char", ngram_range=(5,5), 
+	char_vector = TfidfVectorizer( analyzer="char", ngram_range=(4,5), 
 		max_features = None, binary=False, min_df=0, stop_words=stop_list)
 	corpus = author_dict["paragraphs"]
 	classes = author_dict["booleans"]
