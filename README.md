@@ -17,6 +17,15 @@ census-dist-female-first.txt
 census-dist-male-first.txt
 - Common female first names in the U.S. extracted from the census. Similar to the census last name file.
 
+3_4_5/combined.txt
+-During our 3rd experiment, we attempted to perform a binary comparison between our n-gram word/character feature and the synonym feature.  This was the resulting file of predictions.
+
+evaluate.py
+-Use to provide statistics such as true positive, true negative, false negative, and false positive counts when passed in a list of predictions and a list of actual labels. Used to give meaningful cross-validation results
+
+3_4_5/features.txt
+-As requested by Dr. Nenkova, we retrieved a list of our features from the character n-gram to see what some of the interesting results were.  The first line is the list, the second line is the total number of features present.
+
 modification_justification.txt
 - This file contains statistics generated from our single feature prediction model. These statistics show how big of the differences are between the Kolata score and non Kolata score for each test paragraph. The average number helps us decide how much "delta" we should add to further lower false negatives.
 
@@ -27,6 +36,12 @@ single_feature.py
 
 stopwords.txt
 - Very similar to the file we used in class. But we decided to leave some rare symbols in case it represents the author's writing style. 
+
+3_4_5/test.txt
+-Purely results from running our trigrams.py file, this is the predictions formed using our 3-gram word and 5-gram character feature.
+
+3_4_5/trigrams.py
+-Main executable that provides the final product we turned in (the test.txt generated is the one we submitted last).  Parses in stopwords.txt and applies this to the 3-gram word feature; combines our 3-gram word and 5-gram character feature vectors into a union of the two.  Currently commented out is the call to combine the results from test.txt and the baseline_v2.txt results.  We found that combining the results lowered accuracy, in the end.
 
 unique_words.py
 - Helper file for us to visualize unique words and their distributions. We experimented with this approach early on and combined with Stanford POS taggers. But we had little luck.

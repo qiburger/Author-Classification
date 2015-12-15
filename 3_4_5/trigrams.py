@@ -29,6 +29,9 @@ def extract_features(author_dict, test_list, stop_list):
 	svm = SVC(kernel="linear")
 	pipeline = Pipeline([("features", vectorizer), ("svm", svm)])
 	pipeline.fit(corpus, classes)	
+	feature_names = char_vector.get_feature_names()
+	print(feature_names)
+	print(str(len(feature_names)))
 	y = pipeline.predict(test_list)
 	return y
 def combine_results():
